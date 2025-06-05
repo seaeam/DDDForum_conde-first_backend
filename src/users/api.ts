@@ -1,7 +1,17 @@
-import type { Request, Response } from 'express'
+import type {
+  CreateUserRequest,
+  CreateUserResponse,
+  EditUserRequest,
+  EditUserResponse,
+  GetUserByEmailRequest,
+  GetUserByEmailResponse,
+} from './types'
 import prisma from '../client/prisma'
 
-export async function createUser(req: Request, res: Response) {
+export async function createUser(
+  req: CreateUserRequest,
+  res: CreateUserResponse,
+) {
   const {
     email,
     username,
@@ -19,15 +29,6 @@ export async function createUser(req: Request, res: Response) {
   }
 
   try {
-    const userByUsername = await prisma.user.findUnique({
-      where: { username },
-    })
-    if (userByUsername) {
-      return res
-        .status(409)
-        .json({ error: 'UsernameAlreadyTaken', data: undefined, success: false })
-    }
-
     const emailByUseremail = await prisma.user.findUnique({
       where: { email },
     })
@@ -53,11 +54,13 @@ export async function createUser(req: Request, res: Response) {
       success: true,
     })
   } catch (error) {
-    return res.status(500).json({ error: 'Server error', data: error, success: false })
+    return res
+      .status(500)
+      .json({ error: 'Server error', data: error, success: false })
   }
 }
 
-export async function editUser(req: Request, res: Response) {
+export async function editUser(req: EditUserRequest, res: EditUserResponse) {
   const { userId } = req.query
   const { email, username, firstName, lastName } = req.body
 
@@ -72,7 +75,7 @@ export async function editUser(req: Request, res: Response) {
 
   try {
     const existingUser = await prisma.user.findUnique({
-      where: { ID: id },
+      where: { id },
     })
     if (!existingUser) {
       return res.status(404).json({
@@ -85,7 +88,7 @@ export async function editUser(req: Request, res: Response) {
     const userByUsername = await prisma.user.findFirst({
       where: {
         username,
-        ID: { not: id },
+        id: { not: id },
       },
     })
     if (userByUsername) {
@@ -100,7 +103,7 @@ export async function editUser(req: Request, res: Response) {
     const userByEmail = await prisma.user.findFirst({
       where: {
         email,
-        ID: { not: id }, // 排除当前用户
+        id: { not: id }, // 排除当前用户
       },
     })
 
@@ -114,7 +117,7 @@ export async function editUser(req: Request, res: Response) {
 
     // 更新用户信息
     const updatedUser = await prisma.user.update({
-      where: { ID: id },
+      where: { id },
       data: {
         email,
         username,
@@ -126,7 +129,7 @@ export async function editUser(req: Request, res: Response) {
     return res.status(200).json({
       error: undefined,
       data: {
-        ID: updatedUser.ID,
+        id: updatedUser.id,
         email: updatedUser.email,
         username: updatedUser.username,
         firstName: updatedUser.firstName,
@@ -144,7 +147,10 @@ export async function editUser(req: Request, res: Response) {
   }
 }
 
-export async function getUserByEmail(req: Request, res: Response) {
+export async function getUserByEmail(
+  req: GetUserByEmailRequest,
+  res: GetUserByEmailResponse,
+) {
   const { email } = req.query
   if (!email) {
     return res.status(409).json({

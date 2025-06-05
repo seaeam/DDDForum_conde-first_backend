@@ -17,14 +17,6 @@ async function createUser(req, res) {
         });
     }
     try {
-        const userByUsername = await prisma_1.default.user.findUnique({
-            where: { username },
-        });
-        if (userByUsername) {
-            return res
-                .status(409)
-                .json({ error: 'UsernameAlreadyTaken', data: undefined, success: false });
-        }
         const emailByUseremail = await prisma_1.default.user.findUnique({
             where: { email },
         });
@@ -49,7 +41,9 @@ async function createUser(req, res) {
         });
     }
     catch (error) {
-        return res.status(500).json({ error: 'Server error', data: error, success: false });
+        return res
+            .status(500)
+            .json({ error: 'Server error', data: error, success: false });
     }
 }
 async function editUser(req, res) {
@@ -65,7 +59,7 @@ async function editUser(req, res) {
     const id = Number(userId);
     try {
         const existingUser = await prisma_1.default.user.findUnique({
-            where: { ID: id },
+            where: { id },
         });
         if (!existingUser) {
             return res.status(404).json({
@@ -77,7 +71,7 @@ async function editUser(req, res) {
         const userByUsername = await prisma_1.default.user.findFirst({
             where: {
                 username,
-                ID: { not: id },
+                id: { not: id },
             },
         });
         if (userByUsername) {
@@ -91,7 +85,7 @@ async function editUser(req, res) {
         const userByEmail = await prisma_1.default.user.findFirst({
             where: {
                 email,
-                ID: { not: id }, // 排除当前用户
+                id: { not: id }, // 排除当前用户
             },
         });
         if (userByEmail) {
@@ -103,7 +97,7 @@ async function editUser(req, res) {
         }
         // 更新用户信息
         const updatedUser = await prisma_1.default.user.update({
-            where: { ID: id },
+            where: { id },
             data: {
                 email,
                 username,
@@ -114,7 +108,7 @@ async function editUser(req, res) {
         return res.status(200).json({
             error: undefined,
             data: {
-                ID: updatedUser.ID,
+                id: updatedUser.id,
                 email: updatedUser.email,
                 username: updatedUser.username,
                 firstName: updatedUser.firstName,

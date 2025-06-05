@@ -1,5 +1,6 @@
 import process from 'node:process'
 import express, { Router } from 'express'
+import postRouter from './posts/routes'
 import userRouter from './users/routes'
 
 const app = express()
@@ -10,7 +11,7 @@ notifyRoute.get('/', (_, res) => {
 })
 
 app.use(express.json())
-app.use(userRouter, notifyRoute)
+app.use(notifyRoute, postRouter, userRouter)
 
 const port = process.env.PORT || 3000
 app.listen(port, () => {

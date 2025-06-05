@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,10 +8,53 @@ datasource db {
 }
 
 model User {
-  ID        Int     @id @unique @default(autoincrement())
-  username  String  @unique
+  username  String
   email     String  @unique
-  password  String 
-  firstName String  
+  firstName String
   lastName  String
+  password  String
+  id        Int     @id @default(autoincrement())
+  member    Member?
+}
+
+model Member {
+  id       Int       @id @default(autoincrement())
+  userId   Int       @unique
+  comments Comment[]
+  user     User      @relation(fields: [userId], references: [id])
+  posts    Post[]
+  votes    Vote[]
+}
+
+model Post {
+  id             Int       @id @default(autoincrement())
+  memberId       Int
+  postType       String
+  title          String
+  content        String
+  dateCreated    DateTime  @default(now())
+  comments       Comment[]
+  memberPostedBy Member    @relation(fields: [memberId], references: [id])
+  votes          Vote[]
+}
+
+model Comment {
+  id              Int       @id @default(autoincrement())
+  postId          Int
+  text            String
+  memberId        Int
+  parentCommentId Int?
+  memberPostedBy  Member    @relation(fields: [memberId], references: [id])
+  parentComment   Comment?  @relation("Replies", fields: [parentCommentId], references: [id])
+  replyComments   Comment[] @relation("Replies")
+  post            Post      @relation(fields: [postId], references: [id])
+}
+
+model Vote {
+  id             Int    @id @default(autoincrement())
+  postId         Int
+  memberId       Int
+  voteType       String
+  memberPostedBy Member @relation(fields: [memberId], references: [id])
+  postBelongsTo  Post   @relation(fields: [postId], references: [id])
 }
