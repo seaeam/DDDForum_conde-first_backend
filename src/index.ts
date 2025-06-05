@@ -5,7 +5,10 @@ import postRouter from './posts/routes'
 import userRouter from './users/routes'
 
 const corsOptions = {
-  origin: ['https://ddd-fourm-code-first-frontend-k979.vercel.app'],
+  origin: [
+    'https://ddd-fourm-code-first-frontend-k979.vercel.app',
+    /^https:\/\/ddd-fourm-code-first-frontend.*\.vercel\.app$/,
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
