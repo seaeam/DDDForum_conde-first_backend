@@ -1,6 +1,7 @@
 import process from 'node:process'
 import cors from 'cors'
 import express, { Router } from 'express'
+import { avatarUpload } from './middleware/upload'
 import postRouter from './posts/routes'
 import userRouter from './users/routes'
 
@@ -24,6 +25,9 @@ notifyRoute.get('/', (_, res) => {
 
 app.use(express.json())
 app.use(cors(corsOptions))
+
+app.use('/avatar', avatarUpload.single('file'))
+
 app.use(notifyRoute, postRouter, userRouter)
 
 const port = process.env.PORT || 3000

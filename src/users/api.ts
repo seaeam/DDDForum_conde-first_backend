@@ -5,13 +5,15 @@ import type {
   EditUserResponse,
   GetUserByEmailRequest,
   GetUserByEmailResponse,
+  UpdateAvatarRequest,
+  UpdateAvatarResponse,
 } from './types'
-import prisma from '../client/prisma'
+import { getUserByEmail, getUserById, getUserFirstByCustom } from './functions/get'
+import { createNewUser } from './functions/create'
+import { updateUser, updateUserAvatar } from './functions/update'
+import { deleteAvatarByUrl } from './functions/upload'
 
-export async function createUser(
-  req: CreateUserRequest,
-  res: CreateUserResponse,
-) {
+export async function createUser(req: CreateUserRequest, res: CreateUserResponse) {
   const {
     email,
     username,
@@ -23,40 +25,24 @@ export async function createUser(
   if (!email || !username) {
     return res.status(400).json({
       error: 'ValidationError',
-      data: undefined,
       success: false,
     })
   }
 
   try {
-    const emailByUseremail = await prisma.user.findUnique({
-      where: { email },
-    })
+    const emailByUseremail = await getUserByEmail(email)
     if (emailByUseremail) {
-      return res
-        .status(409)
-        .json({ error: 'EmailAlreadyInUse', data: undefined, success: false })
+      return res.status(409).json({ error: 'EmailAlreadyInUse', success: false })
     }
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        username,
-        firstName,
-        lastName,
-        password,
-      },
-    })
+    const user = await createNewUser({ email, firstName, lastName, password, username })
 
     return res.status(201).json({
-      error: undefined,
       data: user,
       success: true,
     })
   } catch (error) {
-    return res
-      .status(500)
-      .json({ error: 'Server error', data: error, success: false })
+    return res.status(500).json({ error: `Server error:${error}`, success: false })
   }
 }
 
@@ -67,25 +53,22 @@ export async function editUser(req: EditUserRequest, res: EditUserResponse) {
   if (!email || !username || !firstName || !lastName) {
     return res.status(400).json({
       error: 'ValidationError',
-      data: undefined,
       success: false,
     })
   }
   const id = Number(userId)
 
   try {
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    })
+    const existingUser = await getUserById(id)
+
     if (!existingUser) {
       return res.status(404).json({
         error: '用户未找到',
-        data: undefined,
         success: false,
       })
     }
 
-    const userByUsername = await prisma.user.findFirst({
+    const userByUsername = await getUserFirstByCustom({
       where: {
         username,
         id: { not: id },
@@ -94,13 +77,12 @@ export async function editUser(req: EditUserRequest, res: EditUserResponse) {
     if (userByUsername) {
       return res.status(409).json({
         error: 'UsernameAlreadyTaken',
-        data: undefined,
         success: false,
       })
     }
 
     // 检查邮箱是否被其他用户使用
-    const userByEmail = await prisma.user.findFirst({
+    const userByEmail = await getUserFirstByCustom({
       where: {
         email,
         id: { not: id }, // 排除当前用户
@@ -110,13 +92,12 @@ export async function editUser(req: EditUserRequest, res: EditUserResponse) {
     if (userByEmail) {
       return res.status(409).json({
         error: 'EmailAlreadyInUse',
-        data: undefined,
         success: false,
       })
     }
 
     // 更新用户信息
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await updateUser({
       where: { id },
       data: {
         email,
@@ -127,7 +108,6 @@ export async function editUser(req: EditUserRequest, res: EditUserResponse) {
     })
 
     return res.status(200).json({
-      error: undefined,
       data: {
         id: updatedUser.id,
         email: updatedUser.email,
@@ -138,42 +118,30 @@ export async function editUser(req: EditUserRequest, res: EditUserResponse) {
       success: true,
     })
   } catch (error) {
-    console.log('======= editUser error =======\n', error)
     return res.status(500).json({
-      error: '服务器错误',
-      data: undefined,
+      error: `服务器错误:${error}`,
       success: false,
     })
   }
 }
 
-export async function getUserByEmail(
+export async function fetchUserByEmail(
   req: GetUserByEmailRequest,
-  res: GetUserByEmailResponse,
+  res: GetUserByEmailResponse
 ) {
   const { email } = req.query
   if (!email) {
     return res.status(409).json({
       error: '邮箱为空',
-      data: undefined,
-      success: false,
-    })
-  } else if (typeof email !== 'string') {
-    return res.status(409).json({
-      error: '邮箱格式不正确',
-      data: undefined,
       success: false,
     })
   }
 
   try {
-    const userByEmail = await prisma.user.findUnique({
-      where: { email },
-    })
+    const userByEmail = await getUserByEmail(email)
+
     if (!userByEmail) {
-      return res
-        .status(404)
-        .json({ error: '用户未找到', data: undefined, success: false })
+      return res.status(404).json({ error: '用户未找到', success: false })
     }
 
     return res.status(200).json({
@@ -181,10 +149,46 @@ export async function getUserByEmail(
       success: true,
     })
   } catch (error) {
-    console.log('======= getUserByEmail error =======\n', error)
     return res.status(500).json({
-      error: '服务器错误',
-      data: undefined,
+      error: `服务器错误:${error}`,
+      success: false,
+    })
+  }
+}
+
+export async function editUserAvatar(
+  req: UpdateAvatarRequest,
+  res: UpdateAvatarResponse
+) {
+  const { userId } = req.query
+  const file = req.file
+
+  if (!userId || !file) {
+    return {
+      success: false,
+      error: '用户ID/头像文件未正确上传',
+    }
+  }
+
+  try {
+    const user = await getUserById(Number(userId))
+    if (!user) throw '用户 ID 不存在'
+
+    const updatedUser = await updateUserAvatar(userId, file)
+
+    if (user?.avatar) {
+      deleteAvatarByUrl(user.avatar, 'dddfourm-avatar').catch((err) => {
+        console.warn('删除旧头像失败:', err)
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: updatedUser.avatar as string,
+    })
+  } catch (error) {
+    return res.status(500).json({
+      error: `更新用户头像失败:${error}`,
       success: false,
     })
   }

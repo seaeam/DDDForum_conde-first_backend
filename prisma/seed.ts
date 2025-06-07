@@ -2,7 +2,7 @@ import type { Post, User } from '@prisma/client'
 import process from 'node:process'
 import prisma from '../src/client/prisma'
 
-const initialUsers: Omit<User, 'id'>[] = [
+const initialUsers: Omit<User, 'id' | 'avatar'>[] = [
   {
     email: 'bobvance@gmail.com',
     firstName: 'Bob',
@@ -105,8 +105,18 @@ async function seed() {
 
   // 创建评论
   const initialPostComments = [
-    { text: 'I posted this!', memberId: memberIds[0], postId: createdPosts[0].id, parentCommentId: null },
-    { text: 'Nice', memberId: memberIds[1], postId: createdPosts[1].id, parentCommentId: null },
+    {
+      text: 'I posted this!',
+      memberId: memberIds[0],
+      postId: createdPosts[0].id,
+      parentCommentId: null,
+    },
+    {
+      text: 'Nice',
+      memberId: memberIds[1],
+      postId: createdPosts[1].id,
+      parentCommentId: null,
+    },
   ]
 
   for (const commentData of initialPostComments) {

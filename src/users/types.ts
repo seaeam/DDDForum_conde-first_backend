@@ -17,6 +17,7 @@ export interface EditUserRequest extends Request {
     username: string
     firstName: string
     lastName: string
+    avatar: string
   }
   query: {
     userId: string
@@ -28,6 +29,15 @@ export interface GetUserByEmailRequest extends Request {
     email: string
   }
 }
+export interface UpdateAvatarRequest extends Request {
+  query: {
+    userId: string
+  }
+
+  body: {
+    file: Express.Multer.File
+  }
+}
 
 interface UserResponse {
   id: number
@@ -37,6 +47,11 @@ interface UserResponse {
   lastName: string
 }
 
-export type CreateUserResponse = Response<ApiResponse<UserResponse | unknown>>
-export type EditUserResponse = Response<ApiResponse<Partial<UserResponse | unknown>>>
-export type GetUserByEmailResponse = Response<ApiResponse<UserResponse | unknown>>
+export type CreateUserResponse = Response<ApiResponse<UserResponse, string>>
+export type EditUserResponse = Response<ApiResponse<Partial<UserResponse>, string>>
+export type GetUserByEmailResponse = Response<ApiResponse<UserResponse, string>>
+export type UpdateAvatarResponse = Response<ApiResponse<string, string>>
+
+export type UploadAvatarReturnType = Promise<
+  { success: true; data: string } | { success: false; error: string }
+>

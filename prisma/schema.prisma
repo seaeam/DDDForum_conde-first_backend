@@ -14,6 +14,7 @@ model User {
   lastName  String
   password  String
   id        Int     @id @default(autoincrement())
+  avatar    String?
   member    Member?
 }
 
